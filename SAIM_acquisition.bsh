@@ -1,0 +1,85 @@
+
+  /**
+  * CALIBRATION FROM 05 MAY 2015 (CALIBRATED WITH 488 LASER)
+  * This script acquires a data series in which the angle of illumination changes
+  * It saves these as a "z" stack
+  */
+
+import java.lang.Math;
+
+ // Edit these variables 
+ //(-42 to 42, images every degree, acquire zero position twice)
+ startAngle = 48;
+ angleStepSize = 1;
+ //nrAngles = 85;
+ acquisitionName = "SAIM angle scan";
+
+
+ float tirfPosFromAngle(float angle) {
+	 // TirfPosition = slope * angle plus Offset
+    x3coeff = -0.0202;
+    x2coeff = 5.4713;
+    x1coeff = -105.51;
+    x0coeff = 12225;
+
+    float pos = x3coeff * Math.pow(angle,3) + 
+    				 x2coeff * Math.pow(angle,2) + 
+    				 x1coeff * angle + 
+    				 x0coeff;
+    return pos;
+ }
+
+  
+ // Set these variables to the correct values and leave
+ deviceName = "TITIRF";
+ propName = "Position";
+
+ // Usually no need to edit below this line
+
+ pos = startAngle;
+ endAngle = 90;
+ nrAngles = endAngle - startAngle;
+ 
+ gui.closeAllAcquisitions();
+ acq = gui.getUniqueAcquisitionName(acquisitionName);
+ gui.openAcquisition(acq, "", 1, 1, 2 * nrAngles + 2, 1,
+   true, // Show
+   false); // Save
+
+// First take images from start to 90 degrees
+ pos = startAngle;
+ endAngle = 90;
+ nrAngles1 = endAngle - startAngle;
+ int image = 0;
+ for (; image <= nrAngles1; image++) {
+ 	 val = tirfPosFromAngle(pos);
+ 	 gui.message ("Image: " + image + ", angle: " + pos +", val: " + val);
+    mmc.setProperty(deviceName, propName, val);
+	 mmc.waitForDevice(deviceName);
+    mmc.snapImage();
+    taggedImg = mmc.getTaggedImage();
+    taggedImg.tags.put("Angle", pos);
+    gui.addImageToAcquisition(acq, 0, 0, image, 0, taggedImg);
+    pos += angleStepSize;
+ }
+
+// then take images from 90 degrees to 180 - startposition degrees
+pos = 90;
+endAngle = 90 + (90 - startAngle);
+nrAngles2 = endAngle - 90 + 1;
+ for (; image <= nrAngles1 + nrAngles2; image++) {
+ 	 val = tirfPosFromAngle(pos);
+ 	 gui.message ("Image: " + image + ", angle: " + pos +", val: " + val);
+    mmc.setProperty(deviceName, propName, val);
+	 mmc.waitForDevice(deviceName);
+    mmc.snapImage();
+    taggedImg = mmc.getTaggedImage();
+    taggedImg.tags.put("Angle", pos);
+    gui.addImageToAcquisition(acq, 0, 0, image, 0, taggedImg);
+    pos += angleStepSize;
+ }
+ 
+
+ gui.closeAcquisition(acq);
+
+ 
